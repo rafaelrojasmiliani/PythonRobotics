@@ -211,10 +211,13 @@ class RRT:
 
         return minind
 
-    @staticmethod
-    def check_collision(node, obstacleList):
+    def check_collision(self, node, obstacleList):
         ''' Check collision in node.path_[x,y].  Check for the intersection the
-        points in node.path and the spheres represented by obstacleList'''
+        points in node.path and the spheres represented by obstacleList
+            This method could be a function. However, in order to gain flexibility, 
+            in the implmeentation of this libarry, this method may be overrrided in order to implement 
+            new collision checkers
+        '''
 
         if node is None:
             return False
