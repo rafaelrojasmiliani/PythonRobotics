@@ -34,6 +34,7 @@ class RRT:
             ''' Paramters:
                 _coordinates: numpy array
                 coordinates of the node '''
+            _coordinates = np.array(_coordinates, dtype=np.float)
             self.coordinates_ = _coordinates.copy()
             self.path_ = []
             self.parent = None
@@ -58,8 +59,8 @@ class RRT:
         self.ambient_space_dim_ = start.shape[0]
         assert start.ndim == 1 and start.ndim == 1
         assert start.shape[0] == goal.shape[0]
-        self.start = start
-        self.end = goal
+        self.start = self.Node(start)
+        self.end = self.Node(goal)
         self.min_rand = rand_area[0]
         self.max_rand = rand_area[1]
         self.expand_dis = expand_dis
@@ -71,11 +72,11 @@ class RRT:
 
         self.sobol_inter_ = 0
 
-    def planning(self, animation=True):
+    def planning(self, _animation=True):
         """
         rrt path planning
 
-        animation: flag for animation on or off
+        _animation: flag for _animation on or off
         """
 
         self.node_list = [self.start]
@@ -89,7 +90,7 @@ class RRT:
             if self.check_collision(new_node, self.obstacle_list):
                 self.node_list.append(new_node)
 
-            if animation and i % 5 == 0:
+            if _animation and i % 5 == 0:
                 self.draw_graph(rnd_node)
 
             if self.calc_dist_to_goal(self.node_list[-1]) <= self.expand_dis:
@@ -97,7 +98,7 @@ class RRT:
                 if self.check_collision(final_node, self.obstacle_list):
                     return self.generate_final_course(len(self.node_list) - 1)
 
-            if animation and i % 5:
+            if _animation and i % 5:
                 self.draw_graph(rnd_node)
 
         return None  # cannot find path
@@ -114,12 +115,12 @@ class RRT:
             of points that joints from_node to to_node'''
 
 
-        new_node = self.Node(from_node.coordinates_.copy())
+        new_node = self.Node([None, None])
         delta_vector = to_node.coordinates_ - from_node.coordinates_
         d = np.linalg.norm(delta_vector)
         delta_vector = delta_vector / d
 
-        new_node.path_ = [new_node.coordinates_.copy()]
+        new_node.path_ = [from_node.coordinates_.copy()]
 
         if extend_length > d:
             extend_length = d
@@ -136,9 +137,8 @@ class RRT:
         if d <= self.path_resolution:
             new_node.path_.append(to_node.coordinates_.copy())
 
-        new_node.coordinates_ = new_node.path_[-1].copy()
-
         new_node.parent = from_node
+        new_node.coordinates_ = path_node_coordinates
 
         return new_node
 
@@ -256,7 +256,7 @@ def main(gx=6.0, gy=10.0):
               goal,
               rand_area=rand_area,
               obstacle_list=obstacleList)
-    path = rrt.planning(animation=show_animation)
+    path = rrt.planning(_animation=show_animation)
 
     if path is None:
         print("Cannot find path")
