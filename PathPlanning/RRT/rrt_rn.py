@@ -53,11 +53,13 @@ class RRT:
         randArea:Random Sampling Area [min,max]
 
         """
+        start = np.array(start, dtype=np.float)
+        goal = np.array(goal, dtype=np.float)
         self.ambient_space_dim_ = start.shape[0]
         assert start.ndim == 1 and start.ndim == 1
         assert start.shape[0] == goal.shape[0]
-        self.start = self.Node(np.array(start, dtype=np.float))
-        self.end = self.Node(np.array(goal, dtype=np.float))
+        self.start = start
+        self.end = goal
         self.min_rand = rand_area[0]
         self.max_rand = rand_area[1]
         self.expand_dis = expand_dis
@@ -101,8 +103,10 @@ class RRT:
         return None  # cannot find path
 
     def steer(self, from_node, to_node, extend_length=float("inf")):
-        ''' Generates a sequece of points that joints the straigh line between
-        from_node to to_node. These points are stored in new_node.path
+        ''' Generates a sequence of points that joints the straight line
+        between from_node to to_node. These points are stored in
+        new_node.path. The node from_node is assigned as the parent of
+        to_node.
         
         Returns
         -------

@@ -32,6 +32,9 @@ class RRT:
             self.path_y = []
             self.parent = None
 
+        def __str__(self):
+            return '({:+.3f}, {:+.3f})'.format(self.x, self.y)
+
     def __init__(self, start, goal, obstacle_list, rand_area,
                  expand_dis=3.0, path_resolution=0.5, goal_sample_rate=5, max_iter=500):
         """
@@ -109,6 +112,7 @@ class RRT:
             new_node.path_x.append(to_node.x)
             new_node.path_y.append(to_node.y)
 
+
         new_node.parent = from_node
 
         return new_node
@@ -136,20 +140,26 @@ class RRT:
             rnd = self.Node(self.end.x, self.end.y)
         return rnd
 
-    def draw_graph(self, rnd=None):
+    def draw_graph(self, rnd=None, new_node=None):
         plt.clf()
         # for stopping simulation with the esc key.
         plt.gcf().canvas.mpl_connect('key_release_event',
                                      lambda event: [exit(0) if event.key == 'escape' else None])
         if rnd is not None:
             plt.plot(rnd.x, rnd.y, "^k")
-        for node in self.node_list:
+
+        for nid, node in enumerate(self.node_list):
             if node.parent:
-                plt.plot(node.path_x, node.path_y, "-g")
+                plt.plot([node.parent.x, node.x], [node.parent.y, node.y], "-g")
+#                plt.text(node.x, node.y, str(nid))
+#                plt.plot(node.x, node.y, 'bo')
+#                plt.plot(node.parent.x, node.parent.y, 'rx')
 
         for (ox, oy, size) in self.obstacle_list:
             self.plot_circle(ox, oy, size)
 
+        if new_node:
+            plt.plot(new_node.x, new_node.y, 'mo')
         plt.plot(self.start.x, self.start.y, "xr")
         plt.plot(self.end.x, self.end.y, "xr")
         plt.axis("equal")
