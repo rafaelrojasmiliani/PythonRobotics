@@ -37,7 +37,7 @@ class RRTStar(RRT):
                  goal,
                  obstacle_list,
                  rand_area,
-                 expand_dis=5.0,
+                 expand_dis=20.0,
                  path_resolution=0.1,
                  goal_sample_rate=20,
                  max_iter=500,
@@ -68,25 +68,24 @@ class RRTStar(RRT):
         for i in range(self.max_iter):
             print("Iter:", i, ", number of nodes:", len(self.node_list))
             rnd = self.get_random_node()
-            print(rnd.coordinates_, '----- rnd')
             nearest_ind = self.get_nearest_node_index(self.node_list, rnd)
             new_node = self.steer(self.node_list[nearest_ind], rnd,
                                   self.expand_dis)
-            print(new_node.coordinates_, '----- new_node')
 
             if self.check_collision(new_node, self.obstacle_list):
                 new_node = self.choose_parent_and_rewire(new_node)
                 if new_node:
                     self.node_list.append(new_node)
 
+                    if self.calc_dist_to_goal(new_node) <= self.expand_dis:
+                        final_node = self.steer(new_node, self.end, self.expand_dis)
+                        if self.check_collision(final_node, self.obstacle_list):
+                            return self.generate_final_course(len(self.node_list) - 1)
+
 
             if _animation:
                 self.draw_graph(rnd)
 
-            if new_node and self.calc_dist_to_goal(new_node) <= self.expand_dis:
-                final_node = self.steer(new_node, self.end, self.expand_dis)
-                if self.check_collision(final_node, self.obstacle_list):
-                    return self.generate_final_course(len(self.node_list) - 1)
 
         print("reached max iteration")
 
@@ -151,7 +150,7 @@ class RRTStar(RRT):
             if auxiliar_node.cost < near_node.cost:
                 near_node.parent = new_node
                 near_node.cost = auxiliar_node.cost
-                new_node.path_ = auxiliar_node.path_
+                near_node.path_ = auxiliar_node.path_
                 self.propagate_cost_to_leaves(new_node)
 
         return new_node

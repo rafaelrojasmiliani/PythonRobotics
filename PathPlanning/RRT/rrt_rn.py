@@ -185,6 +185,8 @@ class RRT:
             if node.parent:
                 path = np.array(node.path_)
                 plt.plot(path[:, 0], path[:, 1], "-g")
+                plt.plot(node.coordinates_[0], node.coordinates_[1], "bo")
+                plt.plot(node.parent.coordinates_[0], node.parent.coordinates_[1], "rx")
 
         for (o_coordinates, size) in self.obstacle_list:
             self.plot_circle(o_coordinates, size)
