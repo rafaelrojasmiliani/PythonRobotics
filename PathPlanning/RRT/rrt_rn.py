@@ -135,7 +135,8 @@ class RRT:
 
         d = np.linalg.norm(to_node.coordinates_ - path_node_coordinates)
         if d <= self.path_resolution:
-            new_node.path_.append(to_node.coordinates_.copy())
+            path_node_coordinates = to_node.coordinates_.copy()
+            new_node.path_.append(path_node_coordinates)
 
         new_node.parent = from_node
         new_node.coordinates_ = path_node_coordinates

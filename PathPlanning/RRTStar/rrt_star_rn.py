@@ -4,7 +4,7 @@ Path planning Sample Code with Optimized Randomized Rapidly-Exploring Random Tre
 Improvement of the origiginal code in order to implement RTT in R^n using low discrepancy sequences
 
 Authors:
-    First implmentation: AtsushiSakai(@Atsushi_twi)
+    Original implementation: AtsushiSakai(@Atsushi_twi)
     Sobol and multidimensional vectors implentation: Rafael A. Rojas
 
 """
@@ -16,12 +16,7 @@ import copy
 import matplotlib.pyplot as plt
 import numpy as np
 
-sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../RRT/")
-
-try:
-    from rrt_rn import RRT
-except ImportError:
-    raise
+from ..RRT.rrt_rn import RRT
 
 show_animation = True
 search_until_max_iter = True
@@ -42,7 +37,7 @@ class RRTStar(RRT):
                  goal,
                  obstacle_list,
                  rand_area,
-                 expand_dis=10.0,
+                 expand_dis=5.0,
                  path_resolution=0.1,
                  goal_sample_rate=20,
                  max_iter=500,
@@ -73,19 +68,22 @@ class RRTStar(RRT):
         for i in range(self.max_iter):
             print("Iter:", i, ", number of nodes:", len(self.node_list))
             rnd = self.get_random_node()
+            print(rnd.coordinates_, '----- rnd')
             nearest_ind = self.get_nearest_node_index(self.node_list, rnd)
             new_node = self.steer(self.node_list[nearest_ind], rnd,
                                   self.expand_dis)
+            print(new_node.coordinates_, '----- new_node')
 
             if self.check_collision(new_node, self.obstacle_list):
                 new_node = self.choose_parent_and_rewire(new_node)
-                self.node_list.append(new_node)
+                if new_node:
+                    self.node_list.append(new_node)
 
 
             if _animation:
-                self.draw_graph(rnd, new_node=new_node)
+                self.draw_graph(rnd)
 
-            if self.calc_dist_to_goal(new_node) <= self.expand_dis:
+            if new_node and self.calc_dist_to_goal(new_node) <= self.expand_dis:
                 final_node = self.steer(new_node, self.end, self.expand_dis)
                 if self.check_collision(final_node, self.obstacle_list):
                     return self.generate_final_course(len(self.node_list) - 1)
@@ -120,10 +118,14 @@ class RRTStar(RRT):
         if hasattr(self, 'expand_dis'):
             r = min(r, self.expand_dis)
 
-        near_nodes_list = [
-            node for node in self.node_list
-            if np.linalg.norm(new_node.coordinates_ - node.coordinates_) < r
-        ]
+        near_nodes_list = []
+        for node in self.node_list:
+            d = np.linalg.norm(new_node.coordinates_ - node.coordinates_) 
+            if d < r:
+                near_nodes_list.append(node)
+            if d < self.path_resolution:
+                # Discart the new node if it is nearest than the path_resolution.
+                return None
 
         if not near_nodes_list:
             return new_node
@@ -141,7 +143,7 @@ class RRTStar(RRT):
             return new_node
 
         new_node = min(
-            accessible_near_nodes_list, key=lambda node: node.cost)
+            new_node_alternative_list, key=lambda node: node.cost)
 
         for near_node in accessible_near_nodes_list:
             auxiliar_node = self.steer(new_node, near_node)
@@ -178,14 +180,14 @@ def main():
 
     # ====Search Path with RRT====
     obstacle_list = [
-        (5, 5, 1),
-        (3, 6, 2),
-        (3, 8, 2),
-        (3, 10, 2),
-        (7, 5, 2),
-        (9, 5, 2),
-        (8, 10, 1),
-        (6, 12, 1),
+        (np.array([5, 5]), 1),
+        (np.array([3, 6]), 2),
+        (np.array([3, 8]), 2),
+        (np.array([3, 10]), 2),
+        (np.array([7, 5]), 2),
+        (np.array([9, 5]), 2),
+        (np.array([8, 10]), 1),
+        (np.array([6, 12]), 1),
     ]  # [x,y,size(radius)]
 
     # Set Initial parameters
