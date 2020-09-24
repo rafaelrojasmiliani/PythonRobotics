@@ -3,15 +3,15 @@
 Path planning Sample Code with Randomized Rapidly-Exploring Random Trees (RRT)
 Improvement of the origiginal code in order to implement RTT in R^n using low discrepancy sequences
 
-Authors: 
-    First implmentation AtsushiSakai(@Atsushi_twi) 
+Authors:
+    First implmentation AtsushiSakai(@Atsushi_twi)
     Sobol and multidimensional vectors implentation Rafael A. Rojas
 
 """
 
 import math
 import random
-
+import signal
 from .sobol import sobol_quasirand
 
 import matplotlib.pyplot as plt
@@ -39,18 +39,25 @@ class RRT:
             self.path_ = []
             self.parent = None
 
-    def __init__(self, start, goal, obstacle_list, rand_area,
-                 expand_dis=3.0, path_resolution=0.5, goal_sample_rate=5, max_iter=500):
+    def __init__(self,
+                 start,
+                 goal,
+                 obstacle_list,
+                 rand_area,
+                 expand_dis=3.0,
+                 path_resolution=0.5,
+                 goal_sample_rate=5,
+                 max_iter=500):
         """
         Setting Parameter
 
-        start: numpy array, 
+        start: numpy array,
             Coordinates of the Start position
         goal:  nympy array
             Coordinats of the goal position
-        obstacle_list: List of lists. 
+        obstacle_list: List of lists.
             This is a list representing single circular obstacles.
-            Each obstacle is represented by the list [x,size], 
+            Each obstacle is represented by the list [x,size],
         randArea:Random Sampling Area [min,max]
 
         """
@@ -72,6 +79,12 @@ class RRT:
 
         self.sobol_inter_ = 0
 
+        self.sigint_received_ = False
+        signal.signal(signal.SIGINT, self.sigint_handler)
+
+    def sigint_handler(self):
+        self.sigint_received_ = True
+
     def planning(self, _animation=True):
         """
         rrt path planning
@@ -81,6 +94,8 @@ class RRT:
 
         self.node_list = [self.start]
         for i in range(self.max_iter):
+            if self.sigint_received_:
+                break
             rnd_node = self.get_random_node()
             nearest_ind = self.get_nearest_node_index(self.node_list, rnd_node)
             nearest_node = self.node_list[nearest_ind]
@@ -94,7 +109,8 @@ class RRT:
                 self.draw_graph(rnd_node)
 
             if self.calc_dist_to_goal(self.node_list[-1]) <= self.expand_dis:
-                final_node = self.steer(self.node_list[-1], self.end, self.expand_dis)
+                final_node = self.steer(self.node_list[-1], self.end,
+                                        self.expand_dis)
                 if self.check_collision(final_node, self.obstacle_list):
                     return self.generate_final_course(len(self.node_list) - 1)
 
@@ -108,12 +124,11 @@ class RRT:
         between from_node to to_node. These points are stored in
         new_node.path. The node from_node is assigned as the parent of
         to_node.
-        
+
         Returns
         -------
             A copy of to_node with the member path_[x, y] with the sequence
             of points that joints from_node to to_node'''
-
 
         new_node = self.Node([None, None])
         delta_vector = to_node.coordinates_ - from_node.coordinates_
@@ -163,8 +178,10 @@ class RRT:
         ''' Generate the new random point in the research area'''
 
         if random.randint(0, 100) > self.goal_sample_rate:
-            rand_coordinates, n = sobol_quasirand(self.ambient_space_dim_, self.sobol_inter_)
-            rand_coordinates = self.min_rand + rand_coordinates*(self.max_rand - self.min_rand)
+            rand_coordinates, n = sobol_quasirand(self.ambient_space_dim_,
+                                                  self.sobol_inter_)
+            rand_coordinates = self.min_rand + \
+                rand_coordinates*(self.max_rand - self.min_rand)
             self.sobol_inter_ = n
             rnd = self.Node(rand_coordinates)
         else:  # goal point sampling
@@ -177,8 +194,9 @@ class RRT:
             return
         plt.clf()
         # for stopping simulation with the esc key.
-        plt.gcf().canvas.mpl_connect('key_release_event',
-                                     lambda event: [exit(0) if event.key == 'escape' else None])
+        plt.gcf().canvas.mpl_connect(
+            'key_release_event',
+            lambda event: [exit(0) if event.key == 'escape' else None])
         if rnd is not None:
             plt.plot(rnd.coordinates_[0], rnd.coordinates_[1], "^k")
         for node in self.node_list:
@@ -186,7 +204,8 @@ class RRT:
                 path = np.array(node.path_)
                 plt.plot(path[:, 0], path[:, 1], "-g")
                 plt.plot(node.coordinates_[0], node.coordinates_[1], "bo")
-                plt.plot(node.parent.coordinates_[0], node.parent.coordinates_[1], "rx")
+                plt.plot(node.parent.coordinates_[0],
+                         node.parent.coordinates_[1], "rx")
 
         for (o_coordinates, size) in self.obstacle_list:
             self.plot_circle(o_coordinates, size)
@@ -212,7 +231,10 @@ class RRT:
     def get_nearest_node_index(node_list, rnd_node):
         ''' returns the index of the node in node_list which is nearest to
         rnd_node '''
-        dlist = [np.linalg.norm(node.coordinates_ - rnd_node.coordinates_) for node in node_list]
+        dlist = [
+            np.linalg.norm(node.coordinates_ - rnd_node.coordinates_)
+            for node in node_list
+        ]
 
         minind = np.argmin(dlist)
 
@@ -221,8 +243,8 @@ class RRT:
     def check_collision(self, node, obstacleList):
         ''' Check collision in node.path_[x,y].  Check for the intersection the
         points in node.path and the spheres represented by obstacleList
-            This method could be a function. However, in order to gain flexibility, 
-            in the implmeentation of this libarry, this method may be overrrided in order to implement 
+            This method could be a function. However, in order to gain flexibility,
+            in the implmeentation of this libarry, this method may be overrrided in order to implement
             new collision checkers
         '''
 
@@ -231,7 +253,10 @@ class RRT:
 
         for (o_coordinates, size) in obstacleList:
 
-            d_list = [np.linalg.norm(coordinates - o_coordinates) for coordinates in node.path_]
+            d_list = [
+                np.linalg.norm(coordinates - o_coordinates)
+                for coordinates in node.path_
+            ]
 
             if min(d_list) <= size:
                 return False  # collision
@@ -250,15 +275,13 @@ def main(gx=6.0, gy=10.0):
 
     obsNum = np.random.randint(20, 60)
     print(obsNum)
-    obstacleList = [ ((np.random.rand(2)-0.5)*20, np.random.rand()) for _ in range(0 , obsNum)]
+    obstacleList = [((np.random.rand(2) - 0.5) * 20, np.random.rand())
+                    for _ in range(0, obsNum)]
     # [x, y, radius]
     # Set Initial parameters
     start = np.array([0, 0])
     goal = np.array([gx, gy])
-    rrt = RRT(start,
-              goal,
-              rand_area=rand_area,
-              obstacle_list=obstacleList)
+    rrt = RRT(start, goal, rand_area=rand_area, obstacle_list=obstacleList)
     path = rrt.planning(_animation=show_animation)
 
     if path is None:
@@ -277,4 +300,3 @@ def main(gx=6.0, gy=10.0):
 
 if __name__ == '__main__':
     main()
-

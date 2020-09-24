@@ -66,6 +66,8 @@ class RRTStar(RRT):
 
         self.node_list = [self.start]
         for i in range(self.max_iter):
+            if self.sigint_received_:
+                break
             print("Iter:", i, ", number of nodes:", len(self.node_list))
             rnd = self.get_random_node()
             nearest_ind = self.get_nearest_node_index(self.node_list, rnd)
@@ -78,20 +80,21 @@ class RRTStar(RRT):
                     self.node_list.append(new_node)
 
                     if self.calc_dist_to_goal(new_node) <= self.expand_dis:
-                        final_node = self.steer(new_node, self.end, self.expand_dis)
-                        if self.check_collision(final_node, self.obstacle_list):
-                            return self.generate_final_course(len(self.node_list) - 1)
-
+                        final_node = self.steer(new_node, self.end,
+                                                self.expand_dis)
+                        if self.check_collision(final_node,
+                                                self.obstacle_list):
+                            return self.generate_final_course(
+                                len(self.node_list) - 1)
 
             if _animation:
                 self.draw_graph(rnd)
 
-
         print("reached max iteration")
 
-#        last_index = self.search_best_goal_node()
-#        if last_index is not None:
-#            return self.generate_final_course(last_index)
+        #        last_index = self.search_best_goal_node()
+        #        if last_index is not None:
+        #            return self.generate_final_course(last_index)
 
         return None
 
@@ -119,7 +122,7 @@ class RRTStar(RRT):
 
         near_nodes_list = []
         for node in self.node_list:
-            d = np.linalg.norm(new_node.coordinates_ - node.coordinates_) 
+            d = np.linalg.norm(new_node.coordinates_ - node.coordinates_)
             if d < r:
                 near_nodes_list.append(node)
             if d < self.path_resolution:
@@ -141,8 +144,7 @@ class RRTStar(RRT):
         if not accessible_near_nodes_list:
             return new_node
 
-        new_node = min(
-            new_node_alternative_list, key=lambda node: node.cost)
+        new_node = min(new_node_alternative_list, key=lambda node: node.cost)
 
         for near_node in accessible_near_nodes_list:
             auxiliar_node = self.steer(new_node, near_node)
@@ -195,8 +197,7 @@ def main():
         goal=[6, 10],
         rand_area=[-2, 15],
         obstacle_list=obstacle_list)
-    path = rrt_star.planning(
-        _animation=show_animation)
+    path = rrt_star.planning(_animation=show_animation)
 
     if path is None:
         print("Cannot find path")
