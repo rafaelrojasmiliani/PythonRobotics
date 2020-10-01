@@ -79,13 +79,14 @@ class RRTStar(RRT):
                 if new_node:
                     self.node_list.append(new_node)
 
-                    if self.calc_dist_to_goal(new_node) <= self.expand_dis:
-                        final_node = self.steer(new_node, self.end,
-                                                self.expand_dis)
-                        if self.check_collision(final_node,
-                                                self.obstacle_list):
-                            return self.generate_final_course(
-                                len(self.node_list) - 1)
+                    final_node = self.steer(
+                        new_node, self.end,
+                        np.linalg.norm(
+                            new_node.coordinates_ - self.end.coordinates_))
+                    print('Trying to connect to goal')
+                    if self.check_collision(final_node, self.obstacle_list):
+                        return self.generate_final_course(
+                            len(self.node_list) - 1)
 
             if _animation:
                 self.draw_graph(rnd)

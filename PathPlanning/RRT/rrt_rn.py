@@ -28,6 +28,11 @@ class RRT:
     class Node:
         """
         RRT Node
+        Attributes:
+            path_ list of numpy.array sequence of coordinates in the straight line that joints the
+            parent with the node.
+            coordinates_: numpy.array coordinates of the node
+            parent: Node, parent node
         """
 
         def __init__(self, _coordinates):
@@ -68,8 +73,19 @@ class RRT:
         assert start.shape[0] == goal.shape[0]
         self.start = self.Node(start)
         self.end = self.Node(goal)
-        self.min_rand = rand_area[0]
-        self.max_rand = rand_area[1]
+
+        if isinstance(rand_area[0], list):
+            assert len(
+                rand_area
+            ) == self.ambient_space_dim_, 'We need limits for all dimensions'
+            self.min_rand = np.array([limit[0] for limit in rand_area])
+            self.max_rand = np.array([limit[1] for limit in rand_area])
+        else:
+            self.min_rand = np.array(
+                [rand_area[0] for _ in range(self.ambient_space_dim_)])
+            self.max_rand = np.array(
+                [rand_area[1] for _ in range(self.ambient_space_dim_)])
+
         self.expand_dis = expand_dis
         self.path_resolution = path_resolution
         self.goal_sample_rate = goal_sample_rate
@@ -85,7 +101,7 @@ class RRT:
     def sigint_handler(self):
         self.sigint_received_ = True
 
-    def planning(self, _animation=True):
+    def planning(self, _animation=False):
         """
         rrt path planning
 
@@ -94,30 +110,39 @@ class RRT:
 
         self.node_list = [self.start]
         for i in range(self.max_iter):
-            if self.sigint_received_:
-                break
-            rnd_node = self.get_random_node()
-            nearest_ind = self.get_nearest_node_index(self.node_list, rnd_node)
-            nearest_node = self.node_list[nearest_ind]
-
-            new_node = self.steer(nearest_node, rnd_node, self.expand_dis)
-
-            if self.check_collision(new_node, self.obstacle_list):
-                self.node_list.append(new_node)
-
+            new_node = self.planning_step()
+            if self.attempt_to_reach_goal(new_node):
+                return self.generate_final_course(len(self.node_list) - 1)
             if _animation and i % 5 == 0:
-                self.draw_graph(rnd_node)
-
-            if self.calc_dist_to_goal(self.node_list[-1]) <= self.expand_dis:
-                final_node = self.steer(self.node_list[-1], self.end,
-                                        self.expand_dis)
-                if self.check_collision(final_node, self.obstacle_list):
-                    return self.generate_final_course(len(self.node_list) - 1)
-
-            if _animation and i % 5:
-                self.draw_graph(rnd_node)
+                self.draw_graph(new_node)
 
         return None  # cannot find path
+
+    def planning_step(self):
+        new_node = self.vertex_selection_method()
+        if new_node:
+            self.node_list.append(new_node)
+        return new_node
+
+    def vertex_selection_method(self):
+        rnd_node = self.get_random_node()
+        nearest_ind = self.get_nearest_node_index(self.node_list, rnd_node)
+        nearest_node = self.node_list[nearest_ind]
+
+        new_node = self.steer(nearest_node, rnd_node, self.expand_dis)
+
+        if self.check_collision(new_node, self.obstacle_list):
+            return new_node
+        return None
+
+    def attempt_to_reach_goal(self, _node):
+
+        final_node = self.steer(
+            _node, self.end,
+            np.linalg.norm(_node.coordinates_ - self.end.coordinates_))
+        if self.check_collision(final_node, self.obstacle_list):
+            return True
+        return False
 
     def steer(self, from_node, to_node, extend_length=float("inf")):
         ''' Generates a sequence of points that joints the straight line
@@ -213,7 +238,10 @@ class RRT:
         plt.plot(self.start.coordinates_[0], self.start.coordinates_[1], "xr")
         plt.plot(self.end.coordinates_[0], self.end.coordinates_[1], "xr")
         plt.axis("equal")
-        plt.axis([self.min_rand, self.max_rand, self.min_rand, self.max_rand])
+        plt.axis([
+            self.min_rand[0], self.max_rand[0], self.min_rand[1],
+            self.max_rand[1]
+        ])
         plt.grid(True)
         plt.pause(0.01)
 
